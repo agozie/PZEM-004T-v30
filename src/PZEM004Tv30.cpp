@@ -19,38 +19,35 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
-
 #include "PZEM004Tv30.h"
 #include <stdio.h>
 
-#define REG_VOLTAGE     0x0000
-#define REG_CURRENT_L   0x0001
-#define REG_CURRENT_H   0X0002
-#define REG_POWER_L     0x0003
-#define REG_POWER_H     0x0004
-#define REG_ENERGY_L    0x0005
-#define REG_ENERGY_H    0x0006
-#define REG_FREQUENCY   0x0007
-#define REG_PF          0x0008
-#define REG_ALARM       0x0009
+#define REG_VOLTAGE 0x0000
+#define REG_CURRENT_L 0x0001
+#define REG_CURRENT_H 0X0002
+#define REG_POWER_L 0x0003
+#define REG_POWER_H 0x0004
+#define REG_ENERGY_L 0x0005
+#define REG_ENERGY_H 0x0006
+#define REG_FREQUENCY 0x0007
+#define REG_PF 0x0008
+#define REG_ALARM 0x0009
 
-#define CMD_RHR         0x03
-#define CMD_RIR         0X04
-#define CMD_WSR         0x06
-#define CMD_CAL         0x41
-#define CMD_REST        0x42
+#define CMD_RHR 0x03
+#define CMD_RIR 0X04
+#define CMD_WSR 0x06
+#define CMD_CAL 0x41
+#define CMD_REST 0x42
 
+#define WREG_ALARM_THR 0x0001
+#define WREG_ADDR 0x0002
 
-#define WREG_ALARM_THR   0x0001
-#define WREG_ADDR        0x0002
-
-#define UPDATE_TIME     200
+#define UPDATE_TIME 200
 
 #define RESPONSE_SIZE 32
 #define READ_TIMEOUT 100
 
 #define INVALID_ADDRESS 0x00
-
 
 #if defined(PZEM004_SOFTSERIAL)
 /*!
@@ -61,7 +58,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  * @param receivePin RX pin
  * @param transmitPin TX pin
  * @param addr Slave address of device
-*/
+ */
 PZEM004Tv30::PZEM004Tv30(uint8_t receivePin, uint8_t transmitPin, uint8_t addr)
 {
     localSWserial = new SoftwareSerial(receivePin, transmitPin); // We will need to clean up in destructor
@@ -77,8 +74,8 @@ PZEM004Tv30::PZEM004Tv30(uint8_t receivePin, uint8_t transmitPin, uint8_t addr)
  *
  * @param port Software serial port instance
  * @param addr Slave address of device
-*/
-PZEM004Tv30::PZEM004Tv30(SoftwareSerial& port, uint8_t addr)
+ */
+PZEM004Tv30::PZEM004Tv30(SoftwareSerial &port, uint8_t addr)
 {
     port.begin(PZEM_BAUD_RATE);
     init((Stream *)&port, true, addr);
@@ -91,8 +88,8 @@ PZEM004Tv30::PZEM004Tv30(SoftwareSerial& port, uint8_t addr)
  *
  * @param port Stream instance
  * @param addr Slave address of device
-*/
-PZEM004Tv30::PZEM004Tv30(Stream& port, uint8_t addr)
+ */
+PZEM004Tv30::PZEM004Tv30(Stream &port, uint8_t addr)
 {
     init(&port, true, addr);
 }
@@ -108,37 +105,37 @@ PZEM004Tv30::PZEM004Tv30(Stream& port, uint8_t addr)
  * @param receivePin (Only ESP32) receive Pin to use
  * @param transmitPin (Only ESP32) transmit Pin to use
  * @param addr Slave address of device
-*/
-#if defined(ESP32)
+ */
+// #if defined(ESP32)
 
-PZEM004Tv30::PZEM004Tv30(HardwareSerial& port, uint8_t receivePin, uint8_t transmitPin, uint8_t addr)
-{
-    port.begin(PZEM_BAUD_RATE, SERIAL_8N1, receivePin, transmitPin);
-    init((Stream *)&port, false, addr);
-}
-#else
+// PZEM004Tv30::PZEM004Tv30(HardwareSerial& port, uint8_t receivePin, uint8_t transmitPin, uint8_t addr)
+// {
+//     port.begin(PZEM_BAUD_RATE, SERIAL_8N1, receivePin, transmitPin);
+//     init((Stream *)&port, false, addr);
+// }
+// #else
 
-
-PZEM004Tv30::PZEM004Tv30(HardwareSerial& port, uint8_t addr)
-{
-    port.begin(PZEM_BAUD_RATE);
-    init((Stream *)&port, false, addr);
-}
-#endif
+// PZEM004Tv30::PZEM004Tv30(HardwareSerial& port, uint8_t addr)
+// {
+//     port.begin(PZEM_BAUD_RATE);
+//     init((Stream *)&port, false, addr);
+// }
+// #endif
 
 /*!
  * PZEM004Tv30::~PZEM004Tv30
  *
  * Destructor deleting software serial
  *
-*/
+ */
 PZEM004Tv30::~PZEM004Tv30()
 {
     // TODO: Remove local SW serial
-    // This is not the correct way to do it. 
+    // This is not the correct way to do it.
     // Best solution would be to completely remove local SW serial instance and not deal with it.
 #if defined(PZEM004_SOFTSERIAL)
-    if(this->localSWserial != nullptr){
+    if (this->localSWserial != nullptr)
+    {
         delete this->localSWserial;
     }
 #endif
@@ -150,11 +147,11 @@ PZEM004Tv30::~PZEM004Tv30()
  * Get line voltage in Volts
  *
  * @return current L-N volage
-*/
+ */
 float PZEM004Tv30::voltage()
 {
-    if(!updateValues()) // Update vales if necessary
-        return NAN; // Update did not work, return NAN
+    if (!updateValues()) // Update vales if necessary
+        return NAN;      // Update did not work, return NAN
 
     return _currentValues.voltage;
 }
@@ -165,11 +162,11 @@ float PZEM004Tv30::voltage()
  * Get line in Amps
  *
  * @return line current
-*/
+ */
 float PZEM004Tv30::current()
 {
-    if(!updateValues())// Update vales if necessary
-        return NAN; // Update did not work, return NAN
+    if (!updateValues()) // Update vales if necessary
+        return NAN;      // Update did not work, return NAN
 
     return _currentValues.current;
 }
@@ -180,11 +177,11 @@ float PZEM004Tv30::current()
  * Get Active power in W
  *
  * @return active power in W
-*/
+ */
 float PZEM004Tv30::power()
 {
-    if(!updateValues()) // Update vales if necessary
-        return NAN; // Update did not work, return NAN
+    if (!updateValues()) // Update vales if necessary
+        return NAN;      // Update did not work, return NAN
 
     return _currentValues.power;
 }
@@ -195,11 +192,11 @@ float PZEM004Tv30::power()
  * Get Active energy in kWh since last reset
  *
  * @return active energy in kWh
-*/
+ */
 float PZEM004Tv30::energy()
 {
-    if(!updateValues()) // Update vales if necessary
-        return NAN; // Update did not work, return NAN
+    if (!updateValues()) // Update vales if necessary
+        return NAN;      // Update did not work, return NAN
 
     return _currentValues.energy;
 }
@@ -210,11 +207,11 @@ float PZEM004Tv30::energy()
  * Get current line frequency in Hz
  *
  * @return line frequency in Hz
-*/
+ */
 float PZEM004Tv30::frequency()
 {
-    if(!updateValues()) // Update vales if necessary
-        return NAN; // Update did not work, return NAN
+    if (!updateValues()) // Update vales if necessary
+        return NAN;      // Update did not work, return NAN
 
     return _currentValues.frequency;
 }
@@ -225,11 +222,11 @@ float PZEM004Tv30::frequency()
  * Get power factor of load
  *
  * @return load power factor
-*/
+ */
 float PZEM004Tv30::pf()
 {
-    if(!updateValues()) // Update vales if necessary
-        return NAN; // Update did not work, return NAN
+    if (!updateValues()) // Update vales if necessary
+        return NAN;      // Update did not work, return NAN
 
     return _currentValues.pf;
 }
@@ -240,8 +237,9 @@ float PZEM004Tv30::pf()
  * Reset the Energy counter on the device
  *
  * @return success
-*/
-bool PZEM004Tv30::resetEnergy(){
+ */
+bool PZEM004Tv30::resetEnergy()
+{
     uint8_t buffer[] = {0x00, CMD_REST, 0x00, 0x00};
     uint8_t reply[5];
     buffer[0] = _addr;
@@ -251,7 +249,8 @@ bool PZEM004Tv30::resetEnergy(){
 
     uint16_t length = receive(reply, 5);
 
-    if(length == 0 || length == 5){
+    if (length == 0 || length == 5)
+    {
         return false;
     }
 
@@ -268,14 +267,14 @@ bool PZEM004Tv30::resetEnergy(){
  * @param[in] addr New device address 0x01-0xF7
  *
  * @return success
-*/
+ */
 bool PZEM004Tv30::setAddress(uint8_t addr)
 {
-    if(addr < 0x01 || addr > 0xF7) // sanity check
+    if (addr < 0x01 || addr > 0xF7) // sanity check
         return false;
 
     // Write the new address to the address register
-    if(!sendCmd8(CMD_WSR, WREG_ADDR, addr, true))
+    if (!sendCmd8(CMD_WSR, WREG_ADDR, addr, true))
         return false;
 
     _addr = addr; // If successful, update the current slave address
@@ -283,12 +282,12 @@ bool PZEM004Tv30::setAddress(uint8_t addr)
     return true;
 }
 
-/*! 
+/*!
  * PZEM004Tv30::readAddress
- * 
+ *
  * Read address from the device memory
  * @return success
-*/
+ */
 uint8_t PZEM004Tv30::readAddress(bool update)
 {
     static uint8_t response[7];
@@ -297,17 +296,18 @@ uint8_t PZEM004Tv30::readAddress(bool update)
     if (!sendCmd8(CMD_RHR, WREG_ADDR, 0x01, false))
         return INVALID_ADDRESS;
 
-
-    if(receive(response, 7) != 7){ // Something went wrong
+    if (receive(response, 7) != 7)
+    { // Something went wrong
         return INVALID_ADDRESS;
     }
 
     // Get the current address
     addr = ((uint32_t)response[3] << 8 | // Raw address
-                              (uint32_t)response[4]);
+            (uint32_t)response[4]);
 
     // Update the internal address if desired
-    if(update){
+    if (update)
+    {
         _addr = addr;
     }
     return addr;
@@ -319,7 +319,7 @@ uint8_t PZEM004Tv30::readAddress(bool update)
  * Get the current device address
  *
  * @return address
-*/
+ */
 uint8_t PZEM004Tv30::getAddress()
 {
     return _addr;
@@ -333,15 +333,16 @@ uint8_t PZEM004Tv30::getAddress()
  * @param[in] watts Alamr theshold
  *
  * @return success
-*/
+ */
 bool PZEM004Tv30::setPowerAlarm(uint16_t watts)
 {
-    if (watts > 25000){ // Sanitych check
+    if (watts > 25000)
+    { // Sanitych check
         watts = 25000;
     }
 
     // Write the watts threshold to the Alarm register
-    if(!sendCmd8(CMD_WSR, WREG_ALARM_THR, watts, true))
+    if (!sendCmd8(CMD_WSR, WREG_ALARM_THR, watts, true))
         return false;
 
     return true;
@@ -354,11 +355,11 @@ bool PZEM004Tv30::setPowerAlarm(uint16_t watts)
  *
  *
  * @return arlam triggerd
-*/
+ */
 bool PZEM004Tv30::getPowerAlarm()
 {
-    if(!updateValues()) // Update vales if necessary
-        return NAN; // Update did not work, return NAN
+    if (!updateValues()) // Update vales if necessary
+        return NAN;      // Update did not work, return NAN
 
     return _currentValues.alarms != 0x0000;
 }
@@ -371,9 +372,10 @@ bool PZEM004Tv30::getPowerAlarm()
  * @param[in] addr - device address
  *
  * @return success
-*/
-void PZEM004Tv30::init(Stream* port, bool isSoft, uint8_t addr){
-    if(addr < 0x01 || addr > 0xF8) // Sanity check of address
+ */
+void PZEM004Tv30::init(Stream *port, bool isSoft, uint8_t addr)
+{
+    if (addr < 0x01 || addr > 0xF8) // Sanity check of address
         addr = PZEM_DEFAULT_ADDR;
     _addr = addr;
 
@@ -386,73 +388,75 @@ void PZEM004Tv30::init(Stream* port, bool isSoft, uint8_t addr){
     _isConnected = false; // We have not received anything yet...
 }
 
-
 /*!
  * PZEM004Tv30::updateValues
  *
  * Read all registers of device and update the local values
  *
  * @return success
-*/
+ */
 bool PZEM004Tv30::updateValues()
 {
-    //static uint8_t buffer[] = {0x00, CMD_RIR, 0x00, 0x00, 0x00, 0x0A, 0x00, 0x00};
+    // static uint8_t buffer[] = {0x00, CMD_RIR, 0x00, 0x00, 0x00, 0x0A, 0x00, 0x00};
     static uint8_t response[25];
 
     // If we read before the update time limit, do not update
-    if( (unsigned long)(millis() - _lastRead)  >  UPDATE_TIME){
+    if ((unsigned long)(millis() - _lastRead) > UPDATE_TIME)
+    {
         // Record current time as _lastRead
         _lastRead = millis();
-    } else {
+    }
+    else
+    {
         return true;
     }
 
     DEBUGLN("Updating Values");
 
-
     // Read 10 registers starting at 0x00 (no check)
     sendCmd8(CMD_RIR, 0x00, 0x0A, false);
 
-
-    if(receive(response, 25) != 25){ // Something went wrong
+    if (receive(response, 25) != 25)
+    { // Something went wrong
         return false;
     }
 
-
-
     // Update the current values
     _currentValues.voltage = ((uint32_t)response[3] << 8 | // Raw voltage in 0.1V
-                              (uint32_t)response[4])/10.0;
+                              (uint32_t)response[4]) /
+                             10.0;
 
     _currentValues.current = ((uint32_t)response[5] << 8 | // Raw current in 0.001A
                               (uint32_t)response[6] |
                               (uint32_t)response[7] << 24 |
-                              (uint32_t)response[8] << 16) / 1000.0;
+                              (uint32_t)response[8] << 16) /
+                             1000.0;
 
-    _currentValues.power =   ((uint32_t)response[9] << 8 | // Raw power in 0.1W
-                              (uint32_t)response[10] |
-                              (uint32_t)response[11] << 24 |
-                              (uint32_t)response[12] << 16) / 10.0;
+    _currentValues.power = ((uint32_t)response[9] << 8 | // Raw power in 0.1W
+                            (uint32_t)response[10] |
+                            (uint32_t)response[11] << 24 |
+                            (uint32_t)response[12] << 16) /
+                           10.0;
 
-    _currentValues.energy =  ((uint32_t)response[13] << 8 | // Raw Energy in 1Wh
-                              (uint32_t)response[14] |
-                              (uint32_t)response[15] << 24 |
-                              (uint32_t)response[16] << 16) / 1000.0;
+    _currentValues.energy = ((uint32_t)response[13] << 8 | // Raw Energy in 1Wh
+                             (uint32_t)response[14] |
+                             (uint32_t)response[15] << 24 |
+                             (uint32_t)response[16] << 16) /
+                            1000.0;
 
-    _currentValues.frequency=((uint32_t)response[17] << 8 | // Raw Frequency in 0.1Hz
-                              (uint32_t)response[18]) / 10.0;
+    _currentValues.frequency = ((uint32_t)response[17] << 8 | // Raw Frequency in 0.1Hz
+                                (uint32_t)response[18]) /
+                               10.0;
 
-    _currentValues.pf =      ((uint32_t)response[19] << 8 | // Raw pf in 0.01
-                              (uint32_t)response[20])/100.0;
+    _currentValues.pf = ((uint32_t)response[19] << 8 | // Raw pf in 0.01
+                         (uint32_t)response[20]) /
+                        100.0;
 
-    _currentValues.alarms =  ((uint32_t)response[21] << 8 | // Raw alarm value
-                              (uint32_t)response[22]);
-
-    
+    _currentValues.alarms = ((uint32_t)response[21] << 8 | // Raw alarm value
+                             (uint32_t)response[22]);
 
     return true;
 }
-
 
 /*!
  * PZEM004Tv30::sendCmd8
@@ -465,44 +469,48 @@ bool PZEM004Tv30::updateValues()
  * @param[in] check - perform a simple read check after write
  *
  * @return success
-*/
-bool PZEM004Tv30::sendCmd8(uint8_t cmd, uint16_t rAddr, uint16_t val, bool check, uint16_t slave_addr){
+ */
+bool PZEM004Tv30::sendCmd8(uint8_t cmd, uint16_t rAddr, uint16_t val, bool check, uint16_t slave_addr)
+{
     uint8_t sendBuffer[8]; // Send buffer
     uint8_t respBuffer[8]; // Response buffer (only used when check is true)
 
-    if((slave_addr == 0xFFFF) ||
-       (slave_addr < 0x01) ||
-       (slave_addr > 0xF7)){
+    if ((slave_addr == 0xFFFF) ||
+        (slave_addr < 0x01) ||
+        (slave_addr > 0xF7))
+    {
         slave_addr = _addr;
     }
 
-    sendBuffer[0] = slave_addr;                   // Set slave address
-    sendBuffer[1] = cmd;                     // Set command
+    sendBuffer[0] = slave_addr; // Set slave address
+    sendBuffer[1] = cmd;        // Set command
 
-    sendBuffer[2] = (rAddr >> 8) & 0xFF;     // Set high byte of register address
-    sendBuffer[3] = (rAddr) & 0xFF;          // Set low byte =//=
+    sendBuffer[2] = (rAddr >> 8) & 0xFF; // Set high byte of register address
+    sendBuffer[3] = (rAddr)&0xFF;        // Set low byte =//=
 
-    sendBuffer[4] = (val >> 8) & 0xFF;       // Set high byte of register value
-    sendBuffer[5] = (val) & 0xFF;            // Set low byte =//=
+    sendBuffer[4] = (val >> 8) & 0xFF; // Set high byte of register value
+    sendBuffer[5] = (val)&0xFF;        // Set low byte =//=
 
-    setCRC(sendBuffer, 8);                   // Set CRC of frame
+    setCRC(sendBuffer, 8); // Set CRC of frame
 
     _serial->write(sendBuffer, 8); // send frame
 
-    if(check) {
-        if(!receive(respBuffer, 8)){ // if check enabled, read the response
+    if (check)
+    {
+        if (!receive(respBuffer, 8))
+        { // if check enabled, read the response
             return false;
         }
 
         // Check if response is same as send
-        for(uint8_t i = 0; i < 8; i++){
-            if(sendBuffer[i] != respBuffer[i])
+        for (uint8_t i = 0; i < 8; i++)
+        {
+            if (sendBuffer[i] != respBuffer[i])
                 return false;
         }
     }
     return true;
 }
-
 
 /*!
  * PZEM004Tv30::receive
@@ -513,34 +521,35 @@ bool PZEM004Tv30::sendCmd8(uint8_t cmd, uint16_t rAddr, uint16_t val, bool check
  * @param[in] len Max number of bytes to read
  *
  * @return number of bytes read
-*/
+ */
 uint16_t PZEM004Tv30::receive(uint8_t *resp, uint16_t len)
 {
-      //* This has to only be enabled for Software serial
-    #if defined(PZEM004_SOFTSERIAL)
-        if(_isSoft)
-            ((SoftwareSerial *)_serial)->listen(); // Start software serial listen
-    #endif
+    //* This has to only be enabled for Software serial
+#if defined(PZEM004_SOFTSERIAL)
+    if (_isSoft)
+        ((SoftwareSerial *)_serial)->listen(); // Start software serial listen
+#endif
     unsigned long startTime = millis(); // Start time for Timeout
-    uint8_t index = 0; // Bytes we have read
-    while((index < len) && (millis() - startTime < READ_TIMEOUT))
+    uint8_t index = 0;                  // Bytes we have read
+    while ((index < len) && (millis() - startTime < READ_TIMEOUT))
     {
-        if(_serial->available() > 0)
+        if (_serial->available() > 0)
         {
             uint8_t c = (uint8_t)_serial->read();
 
             resp[index++] = c;
         }
-        yield();	// do background netw tasks while blocked for IO (prevents ESP watchdog trigger)
+        yield(); // do background netw tasks while blocked for IO (prevents ESP watchdog trigger)
     }
 
     // Check CRC with the number of bytes read
-    if(!checkCRC(resp, index)){
+    if (!checkCRC(resp, index))
+    {
         _isConnected = false; // We are no longer connected
         return 0;
     }
 
-     _isConnected = true; // We received a reply 
+    _isConnected = true; // We received a reply
     return index;
 }
 
@@ -553,15 +562,15 @@ uint16_t PZEM004Tv30::receive(uint8_t *resp, uint16_t len)
  * @param[in] len  Length of the respBuffer including 2 bytes for CRC
  *
  * @return is the buffer check sum valid
-*/
-bool PZEM004Tv30::checkCRC(const uint8_t *buf, uint16_t len){
-    if(len <= 2) // Sanity check
+ */
+bool PZEM004Tv30::checkCRC(const uint8_t *buf, uint16_t len)
+{
+    if (len <= 2) // Sanity check
         return false;
 
     uint16_t crc = CRC16(buf, len - 2); // Compute CRC of data
-    return ((uint16_t)buf[len-2]  | (uint16_t)buf[len-1] << 8) == crc;
+    return ((uint16_t)buf[len - 2] | (uint16_t)buf[len - 1] << 8) == crc;
 }
-
 
 /*!
  * PZEM004Tv30::setCRC
@@ -572,18 +581,18 @@ bool PZEM004Tv30::checkCRC(const uint8_t *buf, uint16_t len){
  * @param[out] data Memory buffer containing the frame to checksum and write CRC to
  * @param[in] len  Length of the respBuffer including 2 bytes for CRC
  *
-*/
-void PZEM004Tv30::setCRC(uint8_t *buf, uint16_t len){
-    if(len <= 2) // Sanity check
+ */
+void PZEM004Tv30::setCRC(uint8_t *buf, uint16_t len)
+{
+    if (len <= 2) // Sanity check
         return;
 
     uint16_t crc = CRC16(buf, len - 2); // CRC of data
 
     // Write high and low byte to last two positions
-    buf[len - 2] = crc & 0xFF; // Low byte first
+    buf[len - 2] = crc & 0xFF;        // Low byte first
     buf[len - 1] = (crc >> 8) & 0xFF; // High byte second
 }
-
 
 // Pre computed CRC table
 static const uint16_t crcTable[] PROGMEM = {
@@ -618,9 +627,7 @@ static const uint16_t crcTable[] PROGMEM = {
     0X8801, 0X48C0, 0X4980, 0X8941, 0X4B00, 0X8BC1, 0X8A81, 0X4A40,
     0X4E00, 0X8EC1, 0X8F81, 0X4F40, 0X8D01, 0X4DC0, 0X4C80, 0X8C41,
     0X4400, 0X84C1, 0X8581, 0X4540, 0X8701, 0X47C0, 0X4680, 0X8641,
-    0X8201, 0X42C0, 0X4380, 0X8341, 0X4100, 0X81C1, 0X8081, 0X4040
-};
-
+    0X8201, 0X42C0, 0X4380, 0X8341, 0X4100, 0X81C1, 0X8081, 0X4040};
 
 /*!
  * PZEM004Tv30::CRC16
@@ -632,10 +639,10 @@ static const uint16_t crcTable[] PROGMEM = {
  * @param[in] len  Length of the respBuffer
  *
  * @return Calculated CRC
-*/
+ */
 uint16_t PZEM004Tv30::CRC16(const uint8_t *data, uint16_t len)
 {
-    uint8_t nTemp; // CRC table index
+    uint8_t nTemp;         // CRC table index
     uint16_t crc = 0xFFFF; // Default value
 
     while (len--)
@@ -653,17 +660,22 @@ uint16_t PZEM004Tv30::CRC16(const uint8_t *data, uint16_t len)
  * Search for available devices. This should be used only for debugging!
  * Prints any found device addresses on the bus.
  * Can be disabled by defining PZEM004T_DISABLE_SEARCH
-*/
-void PZEM004Tv30::search(){
-#if ( not defined(PZEM004T_DISABLE_SEARCH))
+ */
+void PZEM004Tv30::search()
+{
+#if (not defined(PZEM004T_DISABLE_SEARCH))
     static uint8_t response[7];
-    for(uint16_t addr = 0x01; addr <= 0xF8; addr++){
-        //Serial.println(addr);
+    for (uint16_t addr = 0x01; addr <= 0xF8; addr++)
+    {
+        // Serial.println(addr);
         sendCmd8(CMD_RIR, 0x00, 0x01, false, addr);
 
-        if(receive(response, 7) != 7){ // Something went wrong
+        if (receive(response, 7) != 7)
+        { // Something went wrong
             continue;
-        } else {
+        }
+        else
+        {
 
             Serial.print("Device on addr: ");
             Serial.println(addr);
